@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, List
 from pydantic import BaseModel
 from exo import DEBUG
 import subprocess
 import psutil
+import pynvml
 import asyncio
 from exo.helpers import get_mac_system_info, subprocess_pool
 
@@ -146,7 +147,7 @@ CHIP_FLOPS.update({f"{key} LAPTOP GPU": value for key, value in CHIP_FLOPS.items
 CHIP_FLOPS.update({f"{key} Laptop GPU": value for key, value in CHIP_FLOPS.items()})
 
 
-async def device_capabilities() -> DeviceCapabilities:
+async def device_capabilities() -> List[DeviceCapabilities]:
   if psutil.MACOS:
     return await mac_device_capabilities()
   elif psutil.LINUX:
@@ -179,24 +180,24 @@ async def linux_device_capabilities() -> DeviceCapabilities:
 
   if DEBUG >= 2: print(f"tinygrad {Device.DEFAULT=}")
   if Device.DEFAULT == "CUDA" or Device.DEFAULT == "NV" or Device.DEFAULT == "GPU":
-    import pynvml
-
     pynvml.nvmlInit()
-    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-    gpu_raw_name = pynvml.nvmlDeviceGetName(handle).upper()
-    gpu_name = gpu_raw_name.rsplit(" ", 1)[0] if gpu_raw_name.endswith("GB") else gpu_raw_name
-    gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-
-    if DEBUG >= 2: print(f"NVIDIA device {gpu_name=} {gpu_memory_info=}")
+    gpu_count = pynvml.nvmlDeviceGetCount()
+    capabilities = []
+    for i in range(gpu_count):
+      handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+      gpu_raw_name = pynvml.nvmlDeviceGetName(handle).upper()
+      gpu_name = gpu_raw_name.rsplit(" ", 1)[0] if gpu_raw_name.endswith("GB") else gpu_raw_name
+      gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+      capabilities.append(DeviceCapabilities(
+        model=f"Linux ({gpu_name})",
+        chip=gpu_name,
+        memory=gpu_memory_info.total // 2**20,
+        flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
+      ))
+      if DEBUG >= 2: print(f"NVIDIA {i + 1} of {gpu_count} - {gpu_name=} {gpu_memory_info=}")
 
     pynvml.nvmlShutdown()
-
-    return DeviceCapabilities(
-      model=f"Linux Box ({gpu_name})",
-      chip=gpu_name,
-      memory=gpu_memory_info.total // 2**20,
-      flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
-    )
+    return capabilities
   elif Device.DEFAULT == "AMD":
     # For AMD GPUs, pyrsmi is the way (Official python package for rocm-smi)
     from pyrsmi import rocml
@@ -209,21 +210,20 @@ async def linux_device_capabilities() -> DeviceCapabilities:
 
     rocml.smi_shutdown()
 
-    return DeviceCapabilities(
+    return [DeviceCapabilities(
       model="Linux Box ({gpu_name})",
       chip=gpu_name,
       memory=gpu_memory_info // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
+    )]
 
   else:
-    return DeviceCapabilities(
+    return [DeviceCapabilities(
       model=f"Linux Box (Device: {Device.DEFAULT})",
       chip=f"Unknown Chip (Device: {Device.DEFAULT})",
       memory=psutil.virtual_memory().total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
-
+    )]
 
 def windows_device_capabilities() -> DeviceCapabilities:
   import psutil
@@ -253,22 +253,24 @@ def windows_device_capabilities() -> DeviceCapabilities:
   contains_amd = any('amd' in gpu_name.lower() for gpu_name in gpu_names)
 
   if contains_nvidia:
-    import pynvml
-
+    capabilities = []
     pynvml.nvmlInit()
-    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-    gpu_raw_name = pynvml.nvmlDeviceGetName(handle).upper()
-    gpu_name = gpu_raw_name.rsplit(" ", 1)[0] if gpu_raw_name.endswith("GB") else gpu_raw_name
-    gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    gpu_count = pynvml.nvmlDeviceGetCount()
+    for i in range(gpu_count):
+      handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+      gpu_raw_name = pynvml.nvmlDeviceGetName(handle).upper()
+      gpu_name = gpu_raw_name.rsplit(" ", 1)[0] if gpu_raw_name.endswith("GB") else gpu_raw_name
+      gpu_memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+      capabilities.append(DeviceCapabilities(
+        model=f"Windows ({gpu_name})",
+        chip=gpu_name,
+        memory=gpu_memory_info.total // 2**20,
+        flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
+      ))
+      if DEBUG >= 2: print(f"NVIDIA {i + 1} of {gpu_count} - {gpu_name=} {gpu_memory_info=}")
 
-    if DEBUG >= 2: print(f"NVIDIA device {gpu_name=} {gpu_memory_info=}")
-
-    return DeviceCapabilities(
-      model=f"Windows Box ({gpu_name})",
-      chip=gpu_name,
-      memory=gpu_memory_info.total // 2**20,
-      flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
-    )
+    pynvml.nvmlShutdown()
+    return capabilities
   elif contains_amd:
     # For AMD GPUs, pyrsmi is the way (Official python package for rocm-smi)
     from pyrsmi import rocml
@@ -281,16 +283,16 @@ def windows_device_capabilities() -> DeviceCapabilities:
 
     rocml.smi_shutdown()
 
-    return DeviceCapabilities(
+    return [DeviceCapabilities(
       model="Windows Box ({gpu_name})",
       chip={gpu_name},
       memory=gpu_memory_info.total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
+    )]
   else:
-    return DeviceCapabilities(
+    return [DeviceCapabilities(
       model=f"Windows Box (Device: Unknown)",
       chip=f"Unknown Chip (Device(s): {gpu_names})",
       memory=psutil.virtual_memory().total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
+    )]

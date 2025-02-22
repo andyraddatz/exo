@@ -175,9 +175,13 @@ class GRPCPeerHandle(PeerHandle):
     response = await self.stub.CollectTopology(request)
     topology = Topology()
     for node_id, capabilities in response.nodes.items():
-      device_capabilities = DeviceCapabilities(
-        model=capabilities.model, chip=capabilities.chip, memory=capabilities.memory, flops=DeviceFlops(fp16=capabilities.flops.fp16, fp32=capabilities.flops.fp32, int8=capabilities.flops.int8)
-      )
+      device_capabilities = [
+        DeviceCapabilities(
+          model=cap.model, chip=cap.chip, memory=cap.memory, 
+          flops=DeviceFlops(fp16=cap.flops.fp16, fp32=cap.flops.fp32, int8=cap.flops.int8)
+        )
+        for cap in capabilities
+      ]
       topology.update_node(node_id, device_capabilities)
     for node_id, peer_connections in response.peer_graph.items():
       for conn in peer_connections.connections:

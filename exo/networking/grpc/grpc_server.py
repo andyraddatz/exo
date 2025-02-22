@@ -116,14 +116,16 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     visited = set(request.visited)
     topology = self.node.current_topology
     nodes = {
-      node_id:
+      node_id: [
         node_service_pb2.DeviceCapabilities(
           model=cap.model,
           chip=cap.chip,
           memory=cap.memory,
           flops=node_service_pb2.DeviceFlops(fp32=cap.flops.fp32, fp16=cap.flops.fp16, int8=cap.flops.int8),
         )
-      for node_id, cap in topology.nodes.items()
+        for cap in caps
+      ]
+      for node_id, caps in topology.nodes.items()
     }
     peer_graph = {
       node_id: node_service_pb2.PeerConnections(connections=[node_service_pb2.PeerConnection(to_id=conn.to_id, description=conn.description) for conn in connections])

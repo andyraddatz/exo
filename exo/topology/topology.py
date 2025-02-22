@@ -1,5 +1,5 @@
 from .device_capabilities import DeviceCapabilities
-from typing import Dict, Set, Optional
+from typing import Dict, List, Set, Optional
 from dataclasses import dataclass
 
 @dataclass
@@ -20,14 +20,14 @@ class PeerConnection:
 
 class Topology:
   def __init__(self):
-    self.nodes: Dict[str, DeviceCapabilities] = {}
+    self.nodes: Dict[str, List[DeviceCapabilities]] = {}
     self.peer_graph: Dict[str, Set[PeerConnection]] = {}
     self.active_node_id: Optional[str] = None
 
-  def update_node(self, node_id: str, device_capabilities: DeviceCapabilities):
+  def update_node(self, node_id: str, device_capabilities: List[DeviceCapabilities]):
     self.nodes[node_id] = device_capabilities
 
-  def get_node(self, node_id: str) -> DeviceCapabilities:
+  def get_node(self, node_id: str) -> List[DeviceCapabilities]:
     return self.nodes.get(node_id)
 
   def all_nodes(self):
@@ -49,7 +49,7 @@ class Topology:
         self.add_edge(conn.from_id, conn.to_id, conn.description)
 
   def __str__(self):
-    nodes_str = ", ".join(f"{node_id}: {cap}" for node_id, cap in self.nodes.items())
+    nodes_str = ", ".join(f"{node_id}: {', '.join([str(cap) for cap in capabilities])}" for node_id, capabilities in self.nodes.items())
     edges_str = ", ".join(f"{node}: {[f'{c.to_id}({c.description})' for c in conns]}"
                          for node, conns in self.peer_graph.items())
     return f"Topology(Nodes: {{{nodes_str}}}, Edges: {{{edges_str}}})"
@@ -57,7 +57,7 @@ class Topology:
   def to_json(self):
     return {
       "nodes": {
-        node_id: capabilities.to_dict()
+        node_id: [cap.to_dict() for cap in capabilities]
         for node_id, capabilities in self.nodes.items()
       },
       "peer_graph": {

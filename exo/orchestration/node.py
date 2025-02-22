@@ -8,7 +8,7 @@ from typing import List, Dict, Optional, Tuple, Union, Set
 from exo.networking import Discovery, PeerHandle, Server
 from exo.inference.inference_engine import InferenceEngine, Shard
 from exo.topology.topology import Topology
-from exo.topology.device_capabilities import device_capabilities, UNKNOWN_DEVICE_CAPABILITIES
+from exo.topology.device_capabilities import DeviceCapabilities, device_capabilities, UNKNOWN_DEVICE_CAPABILITIES
 from exo.topology.partitioning_strategy import Partition, PartitioningStrategy, map_partitions_to_shards
 from exo import DEBUG
 from exo.helpers import AsyncCallbackSystem
@@ -38,7 +38,7 @@ class Node:
     self.partitioning_strategy = partitioning_strategy
     self.peers: List[PeerHandle] = {}
     self.topology: Topology = Topology()
-    self.device_capabilities = UNKNOWN_DEVICE_CAPABILITIES
+    self.device_capabilities: List[DeviceCapabilities] = []
     self.buffered_token_output: Dict[str, Tuple[List[int], bool]] = {}
     self.buffered_logits: Dict[str, List[np.ndarray]] = {}
     self.buffered_inputs: Dict[str, List[np.ndarray]] = {}
@@ -549,7 +549,7 @@ class Node:
     visited.update(p.id() for p in self.peers)
 
     for peer in self.peers:
-      next_topology.update_node(peer.id(), peer.device_capabilities())
+      next_topology.update_node(peer.id(), await peer.device_capabilities())
       next_topology.add_edge(self.id, peer.id(), peer.description())
 
       if peer.id() in prev_visited:
