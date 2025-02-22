@@ -55,10 +55,10 @@ class UDPDiscovery(Discovery):
     node_port: int,
     listen_port: int,
     broadcast_port: int,
-    create_peer_handle: Callable[[str, str, str, DeviceCapabilities], PeerHandle],
+    create_peer_handle: Callable[[str, str, str, List[DeviceCapabilities]], PeerHandle],
     broadcast_interval: int = 2.5,
     discovery_timeout: int = 30,
-    device_capabilities: DeviceCapabilities = UNKNOWN_DEVICE_CAPABILITIES,
+    device_capabilities: List[DeviceCapabilities] = [UNKNOWN_DEVICE_CAPABILITIES],
     allowed_node_ids: Optional[List[str]] = None,
     allowed_interface_types: Optional[List[str]] = None,
   ):
@@ -105,7 +105,7 @@ class UDPDiscovery(Discovery):
           "type": "discovery",
           "node_id": self.node_id,
           "grpc_port": self.node_port,
-          "device_capabilities": self.device_capabilities.to_dict(),
+          "device_capabilities": [cap.to_dict() for cap in self.device_capabilities],
           "priority": interface_priority,
           "interface_name": interface_name,
           "interface_type": interface_type,
@@ -175,7 +175,7 @@ class UDPDiscovery(Discovery):
         if DEBUG_DISCOVERY >= 2: print(f"Ignoring peer {peer_id} as its interface type {peer_interface_type} is not in the allowed interface types list")
         return
 
-      device_capabilities = DeviceCapabilities(**message["device_capabilities"])
+      device_capabilities = [DeviceCapabilities(**cap) for cap in message["device_capabilities"]]
 
       if peer_id not in self.known_peers or self.known_peers[peer_id][0].addr() != f"{peer_host}:{peer_port}":
         if peer_id in self.known_peers:

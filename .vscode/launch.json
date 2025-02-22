@@ -10,10 +10,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/exo/main.py",
             "console": "integratedTerminal",
-            "args": [
-                "--wait-for-peers",
-                "1"
-            ],
+            // "args": [
+            //     "--wait-for-peers",
+            //     "1"
+            // ],
             "env": {
                 "DEBUG": "2"
             }

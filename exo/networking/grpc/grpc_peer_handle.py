@@ -21,7 +21,7 @@ else:
 
 
 class GRPCPeerHandle(PeerHandle):
-  def __init__(self, _id: str, address: str, desc: str, device_capabilities: DeviceCapabilities):
+  def __init__(self, _id: str, address: str, desc: str, device_capabilities: List[DeviceCapabilities]):
     self._id = _id
     self.address = address
     self.desc = desc
@@ -51,7 +51,7 @@ class GRPCPeerHandle(PeerHandle):
   def description(self) -> str:
     return self.desc
 
-  def device_capabilities(self) -> DeviceCapabilities:
+  def device_capabilities(self) -> List[DeviceCapabilities]:
     return self._device_capabilities
 
   async def connect(self):
