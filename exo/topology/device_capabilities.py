@@ -163,18 +163,17 @@ async def device_capabilities() -> List[DeviceCapabilities]:
     )
 
 
-async def mac_device_capabilities() -> DeviceCapabilities:
+async def mac_device_capabilities() -> List[DeviceCapabilities]:
   model_id, chip_id, memory = await get_mac_system_info()
-  
-  return DeviceCapabilities(
+  return [DeviceCapabilities(
     model=model_id,
     chip=chip_id,
     memory=memory,
     flops=CHIP_FLOPS.get(chip_id, DeviceFlops(fp32=0, fp16=0, int8=0))
-  )
+  )]
 
 
-async def linux_device_capabilities() -> DeviceCapabilities:
+async def linux_device_capabilities() -> List[DeviceCapabilities]:
   import psutil
   from tinygrad import Device
 
@@ -194,7 +193,7 @@ async def linux_device_capabilities() -> DeviceCapabilities:
         memory=gpu_memory_info.total // 2**20,
         flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
       ))
-      if DEBUG >= 2: print(f"NVIDIA {i + 1} of {gpu_count} - {gpu_name=} {gpu_memory_info=}")
+      if DEBUG >= 2: print(f"NVIDIA [{i + 1} of {gpu_count}] {gpu_name=} {gpu_memory_info=}")
 
     pynvml.nvmlShutdown()
     return capabilities
@@ -203,29 +202,32 @@ async def linux_device_capabilities() -> DeviceCapabilities:
     from pyrsmi import rocml
 
     rocml.smi_initialize()
-    gpu_name = rocml.smi_get_device_name(0).upper()
-    gpu_memory_info = rocml.smi_get_device_memory_total(0)
-
-    if DEBUG >= 2: print(f"AMD device {gpu_name=} {gpu_memory_info=}")
+    gpu_count = rocml.smi_get_device_count()
+    capabilities = []
+    for i in range(gpu_count):
+      gpu_name = rocml.smi_get_device_name(i).upper()
+      gpu_memory_info = rocml.smi_get_device_memory_total(i)
+      capabilities.append(DeviceCapabilities(
+        model=f"Linux ({gpu_name})",
+        chip=gpu_name,
+        memory=gpu_memory_info.total // 2**20,
+        flops=DeviceFlops(fp32=0, fp16=0, int8=0),
+      ))
+      if DEBUG >= 2: print(f"AMD [{i + 1} of {gpu_count}] {gpu_name=} {gpu_memory_info=}")
 
     rocml.smi_shutdown()
 
-    return [DeviceCapabilities(
-      model="Linux Box ({gpu_name})",
-      chip=gpu_name,
-      memory=gpu_memory_info // 2**20,
-      flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )]
+    return capabilities
 
   else:
     return [DeviceCapabilities(
-      model=f"Linux Box (Device: {Device.DEFAULT})",
+      model=f"Linux (Device: {Device.DEFAULT})",
       chip=f"Unknown Chip (Device: {Device.DEFAULT})",
       memory=psutil.virtual_memory().total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
     )]
 
-def windows_device_capabilities() -> DeviceCapabilities:
+def windows_device_capabilities() -> List[DeviceCapabilities]:
   import psutil
 
   def get_gpu_info():
@@ -267,7 +269,7 @@ def windows_device_capabilities() -> DeviceCapabilities:
         memory=gpu_memory_info.total // 2**20,
         flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
       ))
-      if DEBUG >= 2: print(f"NVIDIA {i + 1} of {gpu_count} - {gpu_name=} {gpu_memory_info=}")
+      if DEBUG >= 2: print(f"NVIDIA [{i + 1} of {gpu_count}] {gpu_name=} {gpu_memory_info=}")
 
     pynvml.nvmlShutdown()
     return capabilities
@@ -276,22 +278,25 @@ def windows_device_capabilities() -> DeviceCapabilities:
     from pyrsmi import rocml
 
     rocml.smi_initialize()
-    gpu_name = rocml.smi_get_device_name(0).upper()
-    gpu_memory_info = rocml.smi_get_device_memory_total(0)
-
-    if DEBUG >= 2: print(f"AMD device {gpu_name=} {gpu_memory_info=}")
+    gpu_count = rocml.smi_get_device_count()
+    capabilities = []
+    for i in range(gpu_count):
+      gpu_name = rocml.smi_get_device_name(i).upper()
+      gpu_memory_info = rocml.smi_get_device_memory_total(i)
+      capabilities.append(DeviceCapabilities(
+        model=f"Windows ({gpu_name})",
+        chip=gpu_name,
+        memory=gpu_memory_info.total // 2**20,
+        flops=DeviceFlops(fp32=0, fp16=0, int8=0),
+      ))
+      if DEBUG >= 2: print(f"AMD [{i + 1} of {gpu_count}] {gpu_name=} {gpu_memory_info=}")
 
     rocml.smi_shutdown()
 
-    return [DeviceCapabilities(
-      model="Windows Box ({gpu_name})",
-      chip={gpu_name},
-      memory=gpu_memory_info.total // 2**20,
-      flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )]
+    return capabilities
   else:
     return [DeviceCapabilities(
-      model=f"Windows Box (Device: Unknown)",
+      model=f"Windows (Device: Unknown)",
       chip=f"Unknown Chip (Device(s): {gpu_names})",
       memory=psutil.virtual_memory().total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
