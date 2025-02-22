@@ -68,8 +68,12 @@ message CollectTopologyRequest {
   int32 max_depth = 2;
 }
 
+message DeviceCapabilitiesList {
+  repeated DeviceCapabilities devices = 1;
+}
+
 message Topology {
-  map<string, DeviceCapabilities> nodes = 1;
+  map<string, DeviceCapabilitiesList> nodes = 1;
   map<string, PeerConnections> peer_graph = 2;
 }
 

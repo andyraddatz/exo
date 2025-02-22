@@ -248,9 +248,6 @@ class TopologyViz:
     visualization[bar_y + 1][pos_x - len(flops_str) // 2:pos_x + len(flops_str) // 2 + len(flops_str) % 2] = flops_str
     visualization[bar_y + 2][pos_x] = "▲"
 
-    # Add an extra empty line for spacing
-    bar_y += 4
-
     for i, partition in enumerate(self.partitions):
       # Get device capabilities list, ensure it's a list even if single device
       device_capabilities = self.topology.nodes.get(partition.node_id, [UNKNOWN_DEVICE_CAPABILITIES])
@@ -277,8 +274,8 @@ class TopologyViz:
       
       # Place each device info (model, memory, TFLOPS) on two lines
       for j, device_capability in enumerate(device_capabilities):
-        node_info.append(f"{device_capability.model} {device_capability.memory // 1024}GB")
-        node_info.append(f"{device_capability.flops.fp16}TFLOPS")
+        node_info.append(f"{device_capability.model}")
+        node_info.append(f"{device_capability.memory // 1024}GB, {device_capability.flops.fp16}TFLOPS")
 
       # Calculate info position based on angle
       info_distance_x = radius_x + 6
