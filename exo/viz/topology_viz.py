@@ -366,18 +366,28 @@ class TopologyViz:
     # Other nodes download progress summary
     summary.add_row(Text("Other Nodes Download Progress:", style="bold"))
     for node_id, progress in self.node_download_progress.items():
-      if node_id != self.node_id:
-        device = self.topology.nodes.get(node_id)
-        partition = next((p for p in self.partitions if p.node_id == node_id), None)
-        partition_info = f"[{partition.start:.2f}-{partition.end:.2f}]" if partition else ""
-        percentage = progress.downloaded_bytes/progress.total_bytes*100 if progress.total_bytes > 0 else 0
-        speed = pretty_print_bytes_per_second(progress.overall_speed)
-        device_info = f"{device.model if device else 'Unknown Device'} {device.memory // 1024 if device else '?'}GB {partition_info}"
-        progress_info = f"{progress.repo_id}@{progress.repo_revision} ({speed})"
-        progress_bar = f"[{'=' * int(percentage // 3.33)}{' ' * (30 - int(percentage // 3.33))}]"
-        percentage_str = f"{percentage:.1f}%"
-        eta_str = f"{progress.overall_eta}"
-        summary.add_row(device_info, progress_info, percentage_str)
-        summary.add_row("", progress_bar, eta_str)
+        if node_id != self.node_id:
+            devices = self.topology.nodes.get(node_id, [])
+            # Ensure devices is a list
+            if not isinstance(devices, list):
+                devices = [devices]
+            partition = next((p for p in self.partitions if p.node_id == node_id), None)
+            partition_info = f"[{partition.start:.2f}-{partition.end:.2f}]" if partition else ""
+            
+            # Create device info string for all devices
+            device_infos = []
+            for device in devices:
+                device_info = f"{device.model if device else 'Unknown Device'} {device.memory // 1024 if device else '?'}GB"
+                device_infos.append(device_info)
+            device_info_str = " + ".join(device_infos) + f" {partition_info}"
+            
+            percentage = progress.downloaded_bytes/progress.total_bytes*100 if progress.total_bytes > 0 else 0
+            speed = pretty_print_bytes_per_second(progress.overall_speed)
+            progress_info = f"{progress.repo_id}@{progress.repo_revision} ({speed})"
+            progress_bar = f"[{'=' * int(percentage // 3.33)}{' ' * (30 - int(percentage // 3.33))}]"
+            percentage_str = f"{percentage:.1f}%"
+            eta_str = f"{progress.overall_eta}"
+            summary.add_row(device_info_str, progress_info, percentage_str)
+            summary.add_row("", progress_bar, eta_str)
 
     return summary

@@ -663,9 +663,11 @@ document.addEventListener("alpine:init", () => {
             <span>${node.model} [${truncateNodeId(nodeId)}]</span>
           </div>
           <div class="node-details">
-            <span>${node.chip}</span>
-            <span>${(node.memory / 1024).toFixed(1)}GB RAM</span>
-            <span>${node.flops.fp32.toFixed(1)} TF</span>
+            ${node.devices.map(device => `
+              <span>${device.model}</span>
+              <span>${device.memory / 1024}GB RAM</span>
+              <span>${device.flops.fp32.toFixed(1)} TF</span>
+            `).join('')}
           </div>
           <div class="peer-connections">
             ${peerConnectionsHtml}
