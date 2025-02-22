@@ -16,7 +16,6 @@ from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.markdown import Markdown
 
-
 class TopologyViz:
   def __init__(self, chatgpt_api_endpoints: List[str] = [], web_chat_urls: List[str] = []):
     self.chatgpt_api_endpoints = chatgpt_api_endpoints
@@ -257,82 +256,84 @@ class TopologyViz:
       device_capabilities = self.topology.nodes.get(partition.node_id, [UNKNOWN_DEVICE_CAPABILITIES])
       if not isinstance(device_capabilities, list):
         device_capabilities = [device_capabilities]
-      
-      for j, device_capability in enumerate(device_capabilities):
-        # Calculate angle for each device in the node
-        angle = 2*math.pi*(i + j/len(device_capabilities))/num_partitions
-        x = int(center_x + radius_x*math.cos(angle)) 
-        y = int(center_y + radius_y*math.sin(angle))
 
-        # Place node with different color for active node and this node  
-        if partition.node_id == self.topology.active_node_id:
-          visualization[y][x] = "🔴"
-        elif partition.node_id == self.node_id: 
-          visualization[y][x] = "🟢"
-        else:
-          visualization[y][x] = "🔵"
+      # Calculate angle for each partition in the cluster
+      angle = 2*math.pi*i/num_partitions
+      x = int(center_x + radius_x*math.cos(angle)) 
+      y = int(center_y + radius_y*math.sin(angle))
+
+      # set node color based on node id
+      if partition.node_id == self.topology.active_node_id:
+        visualization[y][x] = "🔴"
+      elif partition.node_id == self.node_id: 
+        visualization[y][x] = "🟢"
+      else:
+        visualization[y][x] = "🔵"
         
-        # Place node info (model, memory, TFLOPS, partition) on three lines
-        node_info = [
-          f"{device_capability.model} {device_capability.memory // 1024}GB",
-          f"{device_capability.flops.fp16}TFLOPS", 
-          f"[{partition.start:.2f}-{partition.end:.2f}]",
-        ]
+      # Place node info (partition) on one line
+      node_info = [
+        f"[{partition.start:.2f}-{partition.end:.2f}]"
+      ]
+      
+      # Place each device info (model, memory, TFLOPS) on two lines
+      for j, device_capability in enumerate(device_capabilities):
+        node_info.append(f"{device_capability.model} {device_capability.memory // 1024}GB")
+        node_info.append(f"{device_capability.flops.fp16}TFLOPS")
 
-        # Calculate info position based on angle
-        info_distance_x = radius_x + 6
-        info_distance_y = radius_y + 3
-        info_x = int(center_x + info_distance_x*math.cos(angle))
-        info_y = int(center_y + info_distance_y*math.sin(angle))
+      # Calculate info position based on angle
+      info_distance_x = radius_x + 6
+      info_distance_y = radius_y + 3
+      info_x = int(center_x + info_distance_x*math.cos(angle))
+      info_y = int(center_y + info_distance_y*math.sin(angle))
 
-        # Adjust text position to avoid overwriting the node icon and prevent cutoff
-        if info_x < x:
-          info_x = max(0, x - len(max(node_info, key=len)) - 1)
-        elif info_x > x:
-          info_x = min(99 - len(max(node_info, key=len)), info_x)
+      # Adjust text position to avoid overwriting the node icon and prevent cutoff
+      if info_x < x:
+        info_x = max(0, x - len(max(node_info, key=len)) - 1)
+      elif info_x > x:
+        info_x = min(99 - len(max(node_info, key=len)), info_x)
 
-        # Adjust for top and bottom nodes
-        if 5*math.pi/4 < angle < 7*math.pi/4:
-          info_x += 4
-        elif math.pi/4 < angle < 3*math.pi/4:
-          info_x += 3
-          info_y -= 2
+      # Adjust for top and bottom nodes
+      if 5*math.pi/4 < angle < 7*math.pi/4:
+        info_x += 4
+      elif math.pi/4 < angle < 3*math.pi/4:
+        info_x += 3
+        info_y -= 2
 
-        for k, line in enumerate(node_info):
-          for l, char in enumerate(line):
-            if 0 <= info_y + k < 48 and 0 <= info_x + l < 100:
-              if info_y + k != y or info_x + l != x:
-                visualization[info_y + k][info_x + l] = char
+      for k, line in enumerate(node_info):
+        for l, char in enumerate(line):
+          if 0 <= info_y + k < 48 and 0 <= info_x + l < 100:
+            if info_y + k != y or info_x + l != x:
+              visualization[info_y + k][info_x + l] = char
 
-        # Draw line to next node and add connection description
-        next_i = (i+1) % num_partitions
-        next_angle = 2*math.pi*next_i/num_partitions
-        next_x = int(center_x + radius_x*math.cos(next_angle))
-        next_y = int(center_y + radius_y*math.sin(next_angle))
+      # Draw line to next node and add connection description
+      next_i = (i+1) % num_partitions
+      next_angle = 2*math.pi*next_i/num_partitions
+      next_x = int(center_x + radius_x*math.cos(next_angle))
+      next_y = int(center_y + radius_y*math.sin(next_angle))
 
-        # Get connection descriptions
-        conn1 = self.topology.peer_graph.get(partition.node_id, set())
-        conn2 = self.topology.peer_graph.get(self.partitions[next_i].node_id, set())
-        description1 = next((c.description for c in conn1 if c.to_id == self.partitions[next_i].node_id), "")
-        description2 = next((c.description for c in conn2 if c.to_id == partition.node_id), "")
-        connection_description = f"{description1}/{description2}"
+      # Get connection descriptions
+      conn1 = self.topology.peer_graph.get(partition.node_id, set())
+      conn2 = self.topology.peer_graph.get(self.partitions[next_i].node_id, set())
+      description1 = next((c.description for c in conn1 if c.to_id == self.partitions[next_i].node_id), "")
+      description2 = next((c.description for c in conn2 if c.to_id == partition.node_id), "")
+      connection_description = f"{description1}/{description2}"
 
-        # Simple line drawing
-        steps = max(abs(next_x - x), abs(next_y - y))
-        for step in range(1, steps):
-          line_x = int(x + (next_x-x)*step/steps)
-          line_y = int(y + (next_y-y)*step/steps)
-          if 0 <= line_y < 48 and 0 <= line_x < 100:
-            visualization[line_y][line_x] = "-"
+      # Simple line drawing
+      steps = max(abs(next_x - x), abs(next_y - y))
+      for step in range(1, steps):
+        line_x = int(x + (next_x-x)*step/steps)
+        line_y = int(y + (next_y-y)*step/steps)
+        if 0 <= line_y < 48 and 0 <= line_x < 100:
+          visualization[line_y][line_x] = "-"
 
-        # Add connection description near the midpoint of the line
-        mid_x = (x + next_x) // 2
-        mid_y = (y + next_y) // 2
-        # Center the description text around the midpoint
-        desc_start_x = mid_x - len(connection_description) // 2
-        for k, char in enumerate(connection_description):
-          if 0 <= mid_y < 48 and 0 <= desc_start_x + k < 100:
-            visualization[mid_y][desc_start_x + k] = char
+      # Add connection description near the midpoint of the line
+      mid_x = (x + next_x) // 2
+      mid_y = (y + next_y) // 2
+      # Center the description text around the midpoint
+      desc_start_x = mid_x - len(connection_description) // 2
+      for k, char in enumerate(connection_description):
+        if 0 <= mid_y < 48 and 0 <= desc_start_x + k < 100:
+          visualization[mid_y][desc_start_x + k] = char
 
     # Convert to string
     return "\n".join("".join(str(char) for char in row) for row in visualization)

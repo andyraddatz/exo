@@ -549,7 +549,7 @@ class Node:
     visited.update(p.id() for p in self.peers)
 
     for peer in self.peers:
-      next_topology.update_node(peer.id(), await peer.device_capabilities())
+      next_topology.update_node(peer.id(), peer.device_capabilities())
       next_topology.add_edge(self.id, peer.id(), peer.description())
 
       if peer.id() in prev_visited:

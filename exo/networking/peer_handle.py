@@ -20,7 +20,7 @@ class PeerHandle(ABC):
     pass
 
   @abstractmethod
-  def device_capabilities(self) -> DeviceCapabilities:
+  def device_capabilities(self) -> List[DeviceCapabilities]:
     pass
 
   @abstractmethod
