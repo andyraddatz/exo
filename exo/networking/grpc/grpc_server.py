@@ -115,18 +115,19 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
     max_depth = request.max_depth
     visited = set(request.visited)
     topology = self.node.current_topology
+    def create_device_capabilities(cap):
+      return node_service_pb2.DeviceCapabilities(
+        model=cap.model,
+        chip=cap.chip,
+        memory=cap.memory,
+        flops=node_service_pb2.DeviceFlops(fp32=cap.flops.fp32, fp16=cap.flops.fp16, int8=cap.flops.int8),
+      )
+
     nodes = {
-      node_id: [
-        node_service_pb2.DeviceCapabilities(
-          model=cap.model,
-          chip=cap.chip,
-          memory=cap.memory,
-          flops=node_service_pb2.DeviceFlops(fp32=cap.flops.fp32, fp16=cap.flops.fp16, int8=cap.flops.int8),
-        )
-        for cap in caps
-      ]
+      node_id: [create_device_capabilities(cap) for cap in (caps if isinstance(caps, list) else [caps])]
       for node_id, caps in topology.nodes.items()
     }
+    
     peer_graph = {
       node_id: node_service_pb2.PeerConnections(connections=[node_service_pb2.PeerConnection(to_id=conn.to_id, description=conn.description) for conn in connections])
       for node_id, connections in topology.peer_graph.items()
