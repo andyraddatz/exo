@@ -124,7 +124,10 @@ class GRPCServer(node_service_pb2_grpc.NodeServiceServicer):
       )
 
     nodes = {
-      node_id: [create_device_capabilities(cap) for cap in (caps if isinstance(caps, list) else [caps])]
+      node_id: node_service_pb2.DeviceCapabilitiesList(devices=[
+        create_device_capabilities(cap)
+        for cap in caps
+      ])
       for node_id, caps in topology.nodes.items()
     }
     
