@@ -644,7 +644,7 @@ document.addEventListener("alpine:init", () => {
       const truncateNodeId = (id) => id.substring(0, 8);
 
       // Create nodes from object
-      Object.entries(topologyData.nodes).forEach(([nodeId, node]) => {
+      Object.entries(topologyData.nodes).forEach(([nodeId, devices]) => {
         const nodeElement = document.createElement('div');
         nodeElement.className = 'topology-node';
 
@@ -660,10 +660,10 @@ document.addEventListener("alpine:init", () => {
         nodeElement.innerHTML = `
           <div class="node-info">
             <span class="status ${nodeId === topologyData.active_node_id ? 'active' : 'inactive'}"></span>
-            <span>${node.model} [${truncateNodeId(nodeId)}]</span>
+            <span>[${truncateNodeId(nodeId)}]</span>
           </div>
           <div class="node-details">
-            ${node.devices.map(device => `
+            ${devices.map(device => `
               <span>${device.model}</span>
               <span>${device.memory / 1024}GB RAM</span>
               <span>${device.flops.fp32.toFixed(1)} TF</span>

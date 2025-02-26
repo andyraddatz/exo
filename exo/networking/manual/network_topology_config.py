@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 from pydantic import BaseModel, ValidationError
 
 from exo.topology.device_capabilities import DeviceCapabilities
@@ -7,7 +7,7 @@ from exo.topology.device_capabilities import DeviceCapabilities
 class PeerConfig(BaseModel):
   address: str
   port: int
-  device_capabilities: DeviceCapabilities
+  device_capabilities: List[DeviceCapabilities]
 
 
 class NetworkTopology(BaseModel):

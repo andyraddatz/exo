@@ -27,22 +27,28 @@ class TestNetworkTopologyConfig(unittest.TestCase):
     config = NetworkTopology.from_path(root_path + "test_config.json")
 
     self.assertEqual(config.peers["node1"].port, 50051)
-    self.assertEqual(config.peers["node1"].device_capabilities.model, "Unknown Model")
+    self.assertIsInstance(config.peers["node1"].device_capabilities, list)
+    self.assertEqual(len(config.peers["node1"].device_capabilities), 1)
+    device1 = config.peers["node1"].device_capabilities[0]
+    self.assertEqual(device1.model, "Unknown Model")
     self.assertEqual(config.peers["node1"].address, "localhost")
-    self.assertEqual(config.peers["node1"].device_capabilities.chip, "Unknown Chip")
-    self.assertEqual(config.peers["node1"].device_capabilities.memory, 0)
-    self.assertEqual(config.peers["node1"].device_capabilities.flops.fp32, 0)
-    self.assertEqual(config.peers["node1"].device_capabilities.flops.fp16, 0)
-    self.assertEqual(config.peers["node1"].device_capabilities.flops.int8, 0)
+    self.assertEqual(device1.chip, "Unknown Chip")
+    self.assertEqual(device1.memory, 0)
+    self.assertEqual(device1.flops.fp32, 0)
+    self.assertEqual(device1.flops.fp16, 0)
+    self.assertEqual(device1.flops.int8, 0)
 
     self.assertEqual(config.peers["node2"].port, 50052)
-    self.assertEqual(config.peers["node2"].device_capabilities.model, "Unknown Model")
+    self.assertIsInstance(config.peers["node2"].device_capabilities, list)
+    self.assertEqual(len(config.peers["node2"].device_capabilities), 1)
+    device2 = config.peers["node2"].device_capabilities[0]
+    self.assertEqual(device2.model, "Unknown Model")
     self.assertEqual(config.peers["node2"].address, "localhost")
-    self.assertEqual(config.peers["node2"].device_capabilities.chip, "Unknown Chip")
-    self.assertEqual(config.peers["node2"].device_capabilities.memory, 0)
-    self.assertEqual(config.peers["node2"].device_capabilities.flops.fp32, 0)
-    self.assertEqual(config.peers["node2"].device_capabilities.flops.fp16, 0)
-    self.assertEqual(config.peers["node2"].device_capabilities.flops.int8, 0)
+    self.assertEqual(device2.chip, "Unknown Chip")
+    self.assertEqual(device2.memory, 0)
+    self.assertEqual(device2.flops.fp32, 0)
+    self.assertEqual(device2.flops.fp16, 0)
+    self.assertEqual(device2.flops.int8, 0)
 
 
 if __name__ == "__main__":

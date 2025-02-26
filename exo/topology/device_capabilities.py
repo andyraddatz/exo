@@ -155,12 +155,12 @@ async def device_capabilities() -> List[DeviceCapabilities]:
   elif psutil.WINDOWS:
     return await windows_device_capabilities()
   else:
-    return DeviceCapabilities(
+    return [DeviceCapabilities(
       model="Unknown Device",
       chip="Unknown Chip",
       memory=psutil.virtual_memory().total // 2**20,
       flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
+    )]
 
 
 async def mac_device_capabilities() -> List[DeviceCapabilities]:

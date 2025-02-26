@@ -30,11 +30,14 @@ Activation Lock Status: Enabled
     result = await mac_device_capabilities()
 
     # Check the results
-    assert isinstance(result, DeviceCapabilities)
-    assert result.model == "MacBook Pro"
-    assert result.chip == "Apple M3 Max"
-    assert result.memory == 131072  # 128 GB in MB
-    assert str(result) == "Model: MacBook Pro. Chip: Apple M3 Max. Memory: 131072MB. Flops: 14.20 TFLOPS, fp16: 28.40 TFLOPS, int8: 56.80 TFLOPS"
+    assert isinstance(result, list)
+    assert len(result) == 1
+    device = result[0]
+    assert isinstance(device, DeviceCapabilities)
+    assert device.model == "MacBook Pro"
+    assert device.chip == "Apple M3 Max"
+    assert device.memory == 131072  # 128 GB in MB
+    assert str(device) == "Model: MacBook Pro. Chip: Apple M3 Max. Memory: 131072MB. Flops: fp32: 14.20 TFLOPS, fp16: 28.40 TFLOPS, int8: 56.80 TFLOPS"
 
 
 @pytest.mark.asyncio
@@ -64,10 +67,13 @@ Activation Lock Status: Disabled
     result = await mac_device_capabilities()
 
     # Check the results
-    assert isinstance(result, DeviceCapabilities)
-    assert result.model == "MacBook Air"
-    assert result.chip == "Apple M2"
-    assert result.memory == 8192  # 8 GB in MB
+    assert isinstance(result, list)
+    assert len(result) == 1
+    device = result[0]
+    assert isinstance(device, DeviceCapabilities)
+    assert device.model == "MacBook Air"
+    assert device.chip == "Apple M2"
+    assert device.memory == 8192  # 8 GB in MB
 
 
 @pytest.mark.skip(reason="Unskip this test when running on a MacBook Pro, Apple M3 Max, 128GB")
@@ -77,18 +83,24 @@ async def test_mac_device_capabilities_real():
     result = await mac_device_capabilities()
 
     # Check the results
-    assert isinstance(result, DeviceCapabilities)
-    assert result.model == "MacBook Pro"
-    assert result.chip == "Apple M3 Max"
-    assert result.memory == 131072  # 128 GB in MB
-    assert result.flops == DeviceFlops(fp32=14.20*TFLOPS, fp16=28.40*TFLOPS, int8=56.80*TFLOPS)
-    assert str(result) == "Model: MacBook Pro. Chip: Apple M3 Max. Memory: 131072MB. Flops: 14.20 TFLOPS, fp16: 28.40 TFLOPS, int8: 56.80 TFLOPS"
+    assert isinstance(result, list)
+    assert len(result) == 1
+    device = result[0]
+    assert isinstance(device, DeviceCapabilities)
+    assert device.model == "MacBook Pro"
+    assert device.chip == "Apple M3 Max"
+    assert device.memory == 131072  # 128 GB in MB
+    assert device.flops == DeviceFlops(fp32=14.20*TFLOPS, fp16=28.40*TFLOPS, int8=56.80*TFLOPS)
+    assert str(device) == "Model: MacBook Pro. Chip: Apple M3 Max. Memory: 131072MB. Flops: 14.20 TFLOPS, fp16: 28.40 TFLOPS, int8: 56.80 TFLOPS"
 
 
 @pytest.mark.asyncio
 async def test_device_capabilities():
     caps = await device_capabilities()
-    assert caps.model != ""
-    assert caps.chip != ""
-    assert caps.memory > 0
-    assert caps.flops is not None
+    assert isinstance(caps, list)
+    assert len(caps) > 0
+    for cap in caps:
+        assert cap.model != ""
+        assert cap.chip != ""
+        assert cap.memory > 0
+        assert cap.flops is not None

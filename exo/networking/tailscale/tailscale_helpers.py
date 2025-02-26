@@ -39,17 +39,23 @@ async def get_device_id() -> str:
     raise Exception(f"{str(e)} Do you have the tailscale cli installed? See: https://tailscale.com/kb/1080/cli")
 
 
-async def update_device_attributes(device_id: str, api_key: str, node_id: str, node_port: int, device_capabilities: DeviceCapabilities):
+async def update_device_attributes(device_id: str, api_key: str, node_id: str, node_port: int, device_capabilities_list: List[DeviceCapabilities]):
   async with aiohttp.ClientSession() as session:
     base_url = f"https://api.tailscale.com/api/v2/device/{device_id}/attributes"
     headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
 
     attributes = {
-      "custom:exo_node_id": node_id.replace('-', '_'), "custom:exo_node_port": node_port, "custom:exo_device_capability_chip": sanitize_attribute(device_capabilities.chip),
-      "custom:exo_device_capability_model": sanitize_attribute(device_capabilities.model), "custom:exo_device_capability_memory": str(device_capabilities.memory),
-      "custom:exo_device_capability_flops_fp16": str(device_capabilities.flops.fp16), "custom:exo_device_capability_flops_fp32": str(device_capabilities.flops.fp32),
-      "custom:exo_device_capability_flops_int8": str(device_capabilities.flops.int8)
+      "custom:exo_node_id": node_id.replace('-', '_'), 
+      "custom:exo_node_port": node_port, 
+      "custom:exo_device_capability_count": len(device_capabilities_list)
     }
+    for i, device_capabilities in enumerate(device_capabilities_list):
+      attributes[f"custom:exo_device_capability_{i}_chip"] = sanitize_attribute(device_capabilities.chip)
+      attributes[f"custom:exo_device_capability_{i}_model"] = sanitize_attribute(device_capabilities.model)
+      attributes[f"custom:exo_device_capability_{i}_memory"] = str(device_capabilities.memory)
+      attributes[f"custom:exo_device_capability_{i}_flops_fp16"] = str(device_capabilities.flops.fp16)
+      attributes[f"custom:exo_device_capability_{i}_flops_fp32"] = str(device_capabilities.flops.fp32)
+      attributes[f"custom:exo_device_capability_{i}_flops_int8"] = str(device_capabilities.flops.int8)
 
     for attr_name, attr_value in attributes.items():
       url = f"{base_url}/{attr_name}"
@@ -61,7 +67,7 @@ async def update_device_attributes(device_id: str, api_key: str, node_id: str, n
           print(f"Failed to update device posture attribute {attr_name}: {response.status} {await response.text()}")
 
 
-async def get_device_attributes(device_id: str, api_key: str) -> Tuple[str, int, DeviceCapabilities]:
+async def get_device_attributes(device_id: str, api_key: str) -> Tuple[str, int, List[DeviceCapabilities]]:
   async with aiohttp.ClientSession() as session:
     url = f"https://api.tailscale.com/api/v2/device/{device_id}/attributes"
     headers = {'Authorization': f'Bearer {api_key}'}
@@ -71,20 +77,25 @@ async def get_device_attributes(device_id: str, api_key: str) -> Tuple[str, int,
         attributes = data.get("attributes", {})
         node_id = attributes.get("custom:exo_node_id", "").replace('_', '-')
         node_port = int(attributes.get("custom:exo_node_port", 0))
-        device_capabilities = DeviceCapabilities(
-          model=attributes.get("custom:exo_device_capability_model", "").replace('_', ' '),
-          chip=attributes.get("custom:exo_device_capability_chip", "").replace('_', ' '),
-          memory=int(attributes.get("custom:exo_device_capability_memory", 0)),
-          flops=DeviceFlops(
-            fp16=float(attributes.get("custom:exo_device_capability_flops_fp16", 0)),
-            fp32=float(attributes.get("custom:exo_device_capability_flops_fp32", 0)),
-            int8=float(attributes.get("custom:exo_device_capability_flops_int8", 0))
+        device_capabilities_list = []
+        device_capabilities_count = int(attributes.get("custom:exo_device_capability_count", 0))
+        for i in range(device_capabilities_count):
+          device_capabilities_list.append(
+            DeviceCapabilities(
+              model=attributes.get(f"custom:exo_device_capability_{i}_model", "").replace('_', ' '),
+              chip=attributes.get(f"custom:exo_device_capability_{i}_chip", "").replace('_', ' '),
+              memory=int(attributes.get(f"custom:exo_device_capability_{i}_memory", 0)),
+              flops=DeviceFlops(
+                fp16=float(attributes.get(f"custom:exo_device_capability_{i}_flops_fp16", 0)),
+                fp32=float(attributes.get(f"custom:exo_device_capability_{i}_flops_fp32", 0)),
+                int8=float(attributes.get(f"custom:exo_device_capability_{i}_flops_int8", 0))
+              )
+            )
           )
-        )
-        return node_id, node_port, device_capabilities
+        return node_id, node_port, device_capabilities_list
       else:
         print(f"Failed to fetch posture attributes for {device_id}: {response.status}")
-        return "", 0, DeviceCapabilities(model="", chip="", memory=0, flops=DeviceFlops(fp16=0, fp32=0, int8=0))
+        return "", 0, []
 
 
 def parse_device_attributes(data: Dict[str, str]) -> Dict[str, Any]:
@@ -93,10 +104,12 @@ def parse_device_attributes(data: Dict[str, str]) -> Dict[str, Any]:
   for key, value in data.items():
     if key.startswith(prefix):
       attr_name = key.replace(prefix, "")
-      if attr_name in ["node_id", "node_port", "device_capability_chip", "device_capability_model"]:
+      if attr_name in ["node_id", "node_port"] or re.match(r"device_capability_\d+_(chip|model)", attr_name):
         result[attr_name] = value.replace('_', ' ')
-      elif attr_name in ["device_capability_memory", "device_capability_flops_fp16", "device_capability_flops_fp32", "device_capability_flops_int8"]:
+      elif re.match(r"device_capability_\d+_(memory|flops_fp16|flops_fp32|flops_int8)", attr_name):
         result[attr_name] = float(value)
+      elif attr_name == "device_capabilities_count":
+        result[attr_name] = int(value)
   return result
 
 

@@ -15,7 +15,7 @@ class ManualDiscovery(Discovery):
     self,
     network_config_path: str,
     node_id: str,
-    create_peer_handle: Callable[[str, str, str, DeviceCapabilities], PeerHandle],
+    create_peer_handle: Callable[[str, str, str, List[DeviceCapabilities]], PeerHandle],
   ):
     self.network_config_path = network_config_path
     self.node_id = node_id

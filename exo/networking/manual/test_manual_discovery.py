@@ -134,12 +134,12 @@ class TestManualDiscoveryWithGRPCPeerHandle(unittest.IsolatedAsyncioTestCase):
           "node3": {
             "address": "localhost",
             "port": 50053,
-            "device_capabilities": {
+            "device_capabilities": [{
               "model": "Unknown Model",
               "chip": "Unknown Chip",
               "memory": 0,
               "flops": {"fp32": 0, "fp16": 0, "int8": 0},
-            },
+            }],
           },
         }
       }

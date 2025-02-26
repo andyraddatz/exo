@@ -12,15 +12,15 @@ class TestRingMemoryWeightedPartitioningStrategy(unittest.TestCase):
     topology = Topology()
     topology.update_node(
       "node1",
-      DeviceCapabilities(model="test1", chip="test1", memory=3000, flops=DeviceFlops(fp32=0, fp16=0, int8=0)),
+      [DeviceCapabilities(model="test1", chip="test1", memory=3000, flops=DeviceFlops(fp32=0, fp16=0, int8=0))],
     )
     topology.update_node(
       "node2",
-      DeviceCapabilities(model="test2", chip="test2", memory=1000, flops=DeviceFlops(fp32=0, fp16=0, int8=0)),
+      [DeviceCapabilities(model="test2", chip="test2", memory=1000, flops=DeviceFlops(fp32=0, fp16=0, int8=0))],
     )
     topology.update_node(
       "node3",
-      DeviceCapabilities(model="test3", chip="test3", memory=6000, flops=DeviceFlops(fp32=0, fp16=0, int8=0)),
+      [DeviceCapabilities(model="test3", chip="test3", memory=6000, flops=DeviceFlops(fp32=0, fp16=0, int8=0))],
     )
     topology.add_edge("node1", "node2")
     topology.add_edge("node2", "node3")
@@ -46,30 +46,30 @@ class TestRingMemoryWeightedPartitioningStrategy(unittest.TestCase):
     topology = Topology()
     topology.update_node(
       "node1",
-      DeviceCapabilities(
+      [DeviceCapabilities(
         model="MacBook Pro",
         chip="test1",
         memory=128*1024*1024*1024,
         flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-      ),
+      )],
     )
     topology.update_node(
       "node2",
-      DeviceCapabilities(
+      [DeviceCapabilities(
         model="Mac Studio",
         chip="test2",
         memory=192*1024*1024*1024,
         flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-      ),
+      )],
     )
     topology.update_node(
       "node3",
-      DeviceCapabilities(
+      [DeviceCapabilities(
         model="MacBook Pro",
         chip="test3",
         memory=128*1024*1024*1024,
         flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-      ),
+      )],
     )
 
     strategy = RingMemoryWeightedPartitioningStrategy()

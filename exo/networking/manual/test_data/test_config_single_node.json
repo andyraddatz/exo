@@ -3,7 +3,7 @@
     "node1": {
       "address": "localhost",
       "port": 50051,
-      "device_capabilities": {
+      "device_capabilities": [{
         "model": "Unknown Model",
         "chip": "Unknown Chip",
         "memory": 0,
@@ -12,7 +12,7 @@
           "fp16": 0,
           "int8": 0
         }
-      }
+      }]
     }
   }
 }

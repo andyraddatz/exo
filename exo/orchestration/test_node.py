@@ -62,5 +62,8 @@ class TestNode(unittest.IsolatedAsyncioTestCase):
     node = Node()
     await node.initialize()
     caps = await node.get_device_capabilities()
-    assert caps is not None
-    assert caps.model != ""
+    assert isinstance(caps, list)
+    assert len(caps) > 0
+    for cap in caps:
+        assert cap is not None
+        assert cap.model != ""
