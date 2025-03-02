@@ -5,17 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: DEBUG=2 exo",
+            "name": "Python Debugger",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/exo/main.py",
-            "console": "integratedTerminal",
-            // "args": [
-            //     "--wait-for-peers",
-            //     "1"
-            // ],
+            "console": "internalConsole",
+            "args": [
+                "run",
+                "llama-3.3-70b",
+                "--prompt",
+                "What is the meaning of exo?"
+            ],
             "env": {
-                "DEBUG": "2"
+                "DEBUG": "2",
+                "EXO_HOME": "/ate1/exo"
             }
         }
     ]
