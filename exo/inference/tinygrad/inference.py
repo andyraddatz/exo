@@ -8,7 +8,7 @@ from tinygrad.nn.state import safe_save, safe_load, get_state_dict, load_state_d
 from tinygrad import Tensor, nn, Context, TinyJit
 from exo.inference.inference_engine import InferenceEngine
 import numpy as np
-from exo.inference.tinygrad.tinygrad_helpers import concat_weights, load
+from exo.inference.tinygrad.tinygrad_helpers import assign_weights, concat_weights, load, get_available_devices
 from exo.download.shard_download import ShardDownloader
 from concurrent.futures import ThreadPoolExecutor
 from .stateful_model import make_prompt_state
@@ -39,25 +39,41 @@ MODEL_PARAMS = {
 }
 
 
-def build_transformer(model_path: Path, shard: Shard, model_size="8B", device=None):
+def build_transformer(model_path: Path, shard: Shard, model_size="8B", devices=None):
   # build model
   linear = nn.Linear
   model = Transformer(**MODEL_PARAMS[model_size]["args"], linear=linear, max_context=8192, jit=True, shard=shard)
+
+  # get devices
+  if devices is None:
+    devices = get_available_devices()
+  else:
+    devices = devices if isinstance(devices, tuple) else (devices,)
 
   # load weights
   if model_path.is_dir():
     if (model_path/"model.safetensors.index.json").exists(): weights = load(str(model_path/"model.safetensors.index.json"), shard)
     elif (model_path/"model.safetensors").exists(): weights = load(str(model_path/"model.safetensors"), shard)
-    else: weights = concat_weights([load(str(model_path/f"consolidated.{i:02d}.pth"), shard) for i in range(MODEL_PARAMS[model_size]["files"])], device[0] if isinstance(device, tuple) else device)
+    else: weights = concat_weights([load(str(model_path/f"consolidated.{i:02d}.pth"), shard) for i in range(MODEL_PARAMS[model_size]["files"])], devices[0] if isinstance(devices, tuple) else devices)
   else:
     weights = load(str(model_path), shard)
   weights = convert_from_huggingface(weights, model, MODEL_PARAMS[model_size]["args"]["n_heads"], MODEL_PARAMS[model_size]["args"]["n_kv_heads"])
   weights = fix_bf16(weights)
 
-  with Context(BEAM=0):
-    # replace weights in model
-    load_state_dict(model, weights, strict=False, consume=False)  # consume=True
-    model = TransformerShard(shard, model)
+  # TODO: spread across devices
+  # weights = assign_weights(weights, devices)
+
+  try:
+    with Context(BEAM=0):
+      # replace weights in model
+      load_state_dict(model, weights, strict=False, consume=False)  # consume=True
+      model = TransformerShard(shard, model)
+  except MemoryError as e:
+    print(f"MemoryError loading weights: {e}")
+    raise e
+  except Exception as e:
+    print(f"Error loading weights: {e}")
+    raise e
 
   return model
 

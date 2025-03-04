@@ -300,7 +300,9 @@ def convert_from_huggingface(weights: Dict[str, Tensor], model: Transformer, n_h
   sd = {}
   for k, v in weights.items():
     if ".rotary_emb." in k: continue
+    # TODO: no longer assign here but in outer func
     v = v.to(Device.DEFAULT)
+    # v = v.to("CUDA")
     if "model.layers" in k:
       if "q_proj" in k:
         v = permute(v, n_heads)
